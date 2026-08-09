@@ -377,3 +377,59 @@ where `ID` is the numerical identifier corresponding to the desired figure or ta
 
 > [!NOTE]
 > Some results in the paper were originally generated using substantially more iterations and therefore required extended execution times, in some cases up to approximately three weeks. Exact point-by-point reproduction may therefore not be feasible on standard personal machines using the reduced artifact configuration. Running the experiments with fewer iterations should nevertheless reproduce the same overall trends.
+
+
+## Customizations: Parameter Settings and Execution Time
+
+The network and simulation parameters are initialized in `Experiments.py` and do not require manual modification to reproduce the standard artifact.
+
+For artifact evaluation, the main parameter reduced relative to the full paper evaluation is:
+
+```python
+self.Iterations = 1
+```
+
+The experiments reported in the paper use up to **500 iterations**.
+
+Users interested in additional experiments may safely adjust the following parameters:
+
+- **`Iterations`**  
+  Controls the number of independent network snapshots used in the experiment.
+  - The GitHub dataset supports up to **4 iterations**.
+  - The extended Zenodo dataset supports up to **500 iterations**.
+
+  To use more than four iterations, download:
+
+  `Nym_RIPE_dataset_long_version.pkl`
+
+  from Zenodo and change the dataset path as described in the Benchmark section.
+
+- **`num_targets`**  
+  Controls the number of target packets considered in the simulation.  
+  Recommended customizable range: **20–200**.
+
+- **`run`**  
+  Controls the duration of each simulation run.  
+  Recommended customizable range: **0.3–1.0**.
+
+- **`delay1`**  
+  Controls the average delay introduced at each mixnode.  
+  Recommended customizable range: **0.01–0.08**.
+
+> [!NOTE]
+> **Execution Time and Configuration**
+>
+> The computational cost grows approximately linearly with the number of iterations because each iteration evaluates an additional network snapshot.
+>
+> Consequently, an experiment requiring approximately **one hour for one iteration** may require approximately **three weeks when repeated 500 times**.
+>
+> The reduced artifact configuration is therefore intended to verify the implementation and reproduce the trends underlying the paper's main claims within a practical artifact-evaluation time.
+>
+> Close numerical agreement with the results reported in the paper requires using the same number of iterations as in the paper.
+
+> [!WARNING]
+> Other parameters in `Experiments.py` should not be modified unless the evaluator is familiar with the dependencies among mixnet topology, routing algorithms, and simulation parameters.
+>
+> Arbitrary modifications may generate configurations that no longer correspond to those evaluated in the paper or may lead to invalid simulation behavior or execution errors.
+>
+> Because the configuration space is large, evaluators are encouraged to contact the authors for guidance regarding substantial changes.
