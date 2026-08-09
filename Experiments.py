@@ -671,7 +671,7 @@ class EXP_Mix(object):
             for j in range(len(Y[0])):
                 Y___ = []
                 for k in range(len(Y[0][0])):
-                    print(Y[i][j][k])
+                    #print(Y[i][j][k])
                     Y___.append(1/(2**Y[i][j][k]))
                 Y__.append(Y___)
             Y_.append(Y__)
