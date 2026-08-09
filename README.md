@@ -180,3 +180,200 @@ self.Iterations = 500
 ```
 > [!WARNING]
 > Increasing the number of iterations substantially increases the execution time. The computational cost grows approximately linearly with the number of network snapshots evaluated.
+
+
+# Project Structure
+
+
+```text
+AURORA/
+│
+├── Figures/                                      # Automatically created output directory for generated figures.
+│
+├── README.md                                     # Main documentation for installing, configuring, and running the artifact.
+│
+├── Artifact_Appendix.pdf                         # Artifact appendix accompanying the AURORA paper.
+│
+├── requirements.txt                              # Python dependencies required to run the artifact.
+│
+├── Nym_RIPE_dataset_short_version.pkl            # Reduced Nym/RIPE dataset containing four network snapshots
+│                                                 # used for standard artifact reproduction.
+│
+├── Baseline_functions.py                         # Core baseline, simulation, and analysis routines used to reproduce
+│                                                 # the experimental results.
+│
+├── Experiments.py                                # Defines the artifact experiments and maps input IDs to the
+│                                                 # corresponding experiments, figures, and tables.
+│
+├── FCP_Functions.py                              # Helper functions for fairness-constrained path selection
+│                                                 # and related routing computations.
+│
+├── main.py                                       # Main entry point of the artifact. Allows users to select and run
+│                                                 # experiments, figures, and tables.
+│
+├── Message_.py                                   # Defines simulated packets and stores their target probabilities,
+│                                                 # timing information, and client information.
+│
+├── Message_Genartion_and_mix_net_processing_.py  # Generates packets and submits them to the mixnet during
+│                                                 # discrete-event simulations.
+│
+├── Mix_Node_.py                                  # Models individual mixnodes, including processing capacity,
+│                                                 # mixing delays, and probability updates.
+│
+├── Node_replacement.py                           # Provides stochastic-matrix normalization utilities used when
+│                                                 # updating routing matrices.
+│
+├── NYM.py                                        # Models packet traversal through the Nym mixnet and records
+│                                                 # latency and anonymity-related simulation statistics.
+│
+├── Optimization.py                               # Implements linear-programming routines for constructing
+│                                                 # constrained routing matrices.
+│
+├── PLOTTER.py                                    # Plotting utilities used to generate the figures reported
+│                                                 # in the paper.
+│
+├── Routings.py                                   # Implements routing-distribution construction, latency processing,
+│                                                 # and supporting routing operations.
+│
+└── Sim.py                                        # Constructs and executes the SimPy-based discrete-event
+                                                  # mixnet simulations.
+```
+
+> [!NOTE]
+> The `Figures/` directory is created automatically when the artifact is executed and contains the generated experimental figures.
+
+> [!NOTE]
+> The extended dataset `Nym_RIPE_dataset_long_version.pkl` is available separately through the Zenodo archive and is not included in the standard GitHub repository because of its size.
+
+# Evaluation Workflow
+
+## Major Claims
+
+- **(C1):** The first claim concerns the trend illustrated in **Figure 3**. Across all settings and scenarios, we observe that as the tuning parameter **α** or the threshold `T` increases, the mixnet propagation latency increases. This claim is substantiated by **Experiment E1**, which generates Figure 3.
+
+- **(C2):** The second claim concerns the trend illustrated in **Figure 4**. Across all settings and scenarios, we observe that as the tuning parameter **α** or the threshold `T` increases, **M_RL**, the maximum processing load on mixnodes, decreases. This claim is supported by **Experiment E1**, which also generates Figure 4.
+
+- **(C3):** The third claim concerns the trend illustrated in **Figure 5**. Across all settings and scenarios, we observe that as the tuning parameter **α** or the threshold `T` increases, the route-selection predictability metric **RSD** decreases. This claim is supported by **Experiment E1**, which also generates Figure 5.
+
+- **(C4):** The fourth claim concerns the trend illustrated in **Figure 11(a)**. Across the evaluated settings, we observe that as the tuning parameter **α** increases, the total end-to-end mixnet communication latency gradually increases. This claim is supported by **Experiment E2**, which generates Figure 11(a).
+
+- **(C5):** The fifth claim concerns the trend illustrated in **Figure 11(b)**. Across the evaluated settings, we observe that as the tuning parameter **α** increases, the session anonymity attack metric **SAA** decreases, thereby increasing the anonymity of client-destination sessions. This claim is supported by **Experiment E2**, which also generates Figure 11(b).
+
+
+## Experiments
+
+### E1: Reproducing Figures 3, 4, and 5; Verifying Claims C1, C2, and C3 [< 45 min]
+
+- **Configuration Parameters:** The configuration parameters match those used for Figures 3, 4, and 5. Specifically:
+  - `L = 3`
+  - `W = 200`
+  - `T = 12` for the RBR experiments in which anonymity and performance are evaluated as a function of `α`
+  - `α = 0.6` for the RBR experiments in which anonymity and performance are evaluated as a function of `T`
+  - `self.Iterations = 1` in `Experiments.py` by default for artifact evaluation
+
+- **Execution:** To run this experiment, either execute:
+
+  ```bash
+  python3 main.py
+  ```
+
+  and enter `1` when prompted, or directly execute:
+
+  ```bash
+  python3 main.py 1
+  ```
+
+- **Results:** Upon completion, the following files will be generated in the `AURORA/Figures/` directory:
+
+  ```text
+  Fig_3a.png
+  Fig_3b.png
+  Fig_3c.png
+  Fig_3d.png
+
+  Fig_4a.png
+  Fig_4b.png
+  Fig_4c.png
+  Fig_4d.png
+
+  Fig_5a.png
+  Fig_5b.png
+  Fig_5c.png
+  Fig_5d.png
+  ```
+
+- **Verification:** Compare the generated figures with Figures 3, 4, and 5 in the paper, shown below. Because the artifact uses a reduced number of iterations for practical execution on personal machines or Google Colab, the reproduced figures may not exactly match the values reported in the paper. For verification purposes, focus on the consistency of the observed trends, particularly whether the corresponding values increase or decrease as expected along the x-axis.
+
+<img width="1571" height="403" alt="image" src="https://github.com/user-attachments/assets/5edf5b69-f14c-42a8-be61-491b55ec048d" />
+
+<img width="1577" height="377" alt="image" src="https://github.com/user-attachments/assets/de33756e-5428-441e-a523-fde95547aa65" />
+
+<img width="1541" height="347" alt="image" src="https://github.com/user-attachments/assets/2ffe7a68-91b1-4aca-92ea-e51ab9d0d512" />
+
+
+
+### E2: Reproducing Figures 11(a) and 11(b); Verifying Claims C4 and C5 [< 20 min]
+
+- **Configuration Parameters:** The configuration parameters match those used for Figure 11. Specifically:
+  - `L = 3`
+  - `W = 300`
+  - Routing strategy: `REP`
+  - Average mixing delay: `μ = 50 ms`
+  - `self.Iterations = 1` in `Experiments.py` by default for artifact evaluation
+
+- **Execution:** To run this experiment, either execute:
+
+  ```bash
+  python3 main.py
+  ```
+
+  and enter `2` when prompted, or directly execute:
+
+  ```bash
+  python3 main.py 2
+  ```
+
+- **Results:** Upon completion, the following files will be generated in the `AURORA/Figures/` directory:
+
+  ```text
+  Fig_11a.png
+  Fig_11b.png
+  ```
+- **Verification:** Compare the generated figures with Figures 11(a) and 11(b) in the paper, shown below. Because the artifact uses a reduced number of iterations for practical execution on personal machines or Google Colab, the reproduced figures may not exactly match the values reported in the paper. For verification purposes, focus on the consistency of the observed trends, particularly whether the corresponding values increase or decrease as expected along the x-axis.
+
+  
+<img width="762" height="302" alt="image" src="https://github.com/user-attachments/assets/d1238f6b-9b92-4972-85a2-3107d8f6eea2" />
+
+
+
+
+
+### E*: Additional Figures and Tables [< 2 h]
+
+If you are interested in running additional experiments that generate specific figures or tables not necessarily associated with the main claims, first execute:
+
+```bash
+python3 main.py
+```
+
+Then enter the appropriate experiment ID from the table below when prompted.
+
+Alternatively, execute a specific target directly using:
+
+```bash
+python3 main.py ID
+```
+
+where `ID` is the numerical identifier corresponding to the desired figure or table.
+
+| Target | ID | Target | ID |
+|---|---:|---|---:|
+| Fig. 3 | `3` | Fig. 4 | `4` |
+| Fig. 5 | `5` | Fig. 8 | `8` |
+| Fig. 9 | `9` | Fig. 11 | `11` |
+| Fig. 12 | `12` | Table 1 | `100` |
+| Table 2 | `200` | Table 3 | `300` |
+| Experiment E1 | `1` | Experiment E2 | `2` |
+
+> [!NOTE]
+> Some results in the paper were originally generated using substantially more iterations and therefore required extended execution times, in some cases up to approximately three weeks. Exact point-by-point reproduction may therefore not be feasible on standard personal machines using the reduced artifact configuration. Running the experiments with fewer iterations should nevertheless reproduce the same overall trends.
