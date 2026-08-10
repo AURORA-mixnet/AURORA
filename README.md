@@ -188,7 +188,7 @@ AURORA/
 │
 ├── README.md                                     # Main documentation for installing, configuring, and running the artifact.
 │
-├── Artifact_Appendix.pdf                         # Artifact appendix accompanying the AURORA paper.
+├── ARTIFACT_APPENDIX.pdf                         # Artifact appendix accompanying the AURORA paper.
 │
 ├── requirements.txt                              # Python dependencies required to run the artifact.
 │
