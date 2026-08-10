@@ -10,7 +10,7 @@ We evaluate AURORA using two complementary approaches: (1) theoretical analysis 
 
 In the theoretical setting, each proposed technique is evaluated under probability distributions for route selection in mixnets and relevant system characteristics, including inter-node latency and mixnode processing capacity.
 
-In contrast, the simulation-based analysis is implemented in Python using the SimPy discrete-event simulation framework. A dynamic set of clients generates packets destined for a set of receivers. These packets traverse mixnodes according to the routing strategies considered in the paper, including RLP, REP, and RBR. Along each route, mixnodes perform mixing operations to anonymize and forward packets.
+In contrast, the simulation-based analysis is implemented in Python using the SimPy discrete-event simulation framework. In simulations, a dynamic set of clients generates packets destined for a set of receivers. These packets traverse mixnodes according to the routing strategies considered in the paper, including RLP, REP, and RBR. Along each route, mixnodes perform mixing operations to anonymize and forward packets.
 
 The artifact contains approximately 10K lines of Python code and provides scripts for reproducing the experiments, figures, and tables presented in the paper. For practical artifact evaluation, the default artifact configuration reduces the number of iterations over independent network snapshots to one, whereas the experiments reported in the paper use up to 500 iterations. All other parameters remain consistent with those used in the paper.
 
