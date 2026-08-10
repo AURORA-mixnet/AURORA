@@ -135,9 +135,7 @@ Consequently, the bundled GitHub artifact supports experiments over up to **4 di
 self.Iterations = 1
 ```
 
-in:
-
-`Experiments.py`
+in: `Experiments.py`
 
 This setting minimizes the artifact execution time while preserving the experimental configuration used in the paper. Evaluators may increase the number of iterations up to **4** without downloading any additional data. For example:
 
