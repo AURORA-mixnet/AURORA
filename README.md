@@ -118,7 +118,7 @@ Alternatively, the artifact can be executed on **Google Colab**. To do so, you n
 > [!TIP]
 > Google Colab is a convenient option for evaluators who do not want to configure a local Python environment.
 >
-## Benchmark: Nym Network Dataset
+## Benchmark: AURORA Dataset
 
 Our evaluation relies on empirical latency, geographical-location, and node-processing-capacity information derived from the [Nym network](https://nym.com) and measurements from the **RIPE Atlas** dataset.
 
