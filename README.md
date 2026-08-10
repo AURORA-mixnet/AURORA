@@ -24,7 +24,7 @@ The artifact is available through both a persistent **Zenodo archive** and the c
 | **Zenodo** | https://doi.org/10.5281/zenodo.xxxx | Full artifact + short and extended datasets |
 | **GitHub** | https://github.com/AURORA-mixnet/AURORA | Full artifact + short dataset |
 
-The GitHub repository and Zenodo archive contain the same artifact code. The main difference is the size of the included Nym dataset.
+The GitHub repository and Zenodo archive contain the same artifact code. The main difference is the size of the included AURORA dataset.
 
 ### 📦 GitHub Dataset
 
