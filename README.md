@@ -338,9 +338,7 @@ AURORA/
 - **Verification:** Compare the generated figures with Figures 11(a) and 11(b) in the paper, shown below. Because the artifact uses a reduced number of iterations for practical execution on personal machines or Google Colab, the reproduced figures may not exactly match the values reported in the paper. For verification purposes, focus on the consistency of the observed trends, particularly whether the corresponding values increase or decrease as expected along the x-axis.
 
   
-<img width="762" height="302" alt="image" src="https://github.com/user-attachments/assets/d1238f6b-9b92-4972-85a2-3107d8f6eea2" />
-
-
+<img width="716" height="265" alt="image" src="https://github.com/user-attachments/assets/702dc9c5-6de2-46a2-aebe-54c0b2ab75d4" />
 
 
 
@@ -387,7 +385,7 @@ self.Iterations = 1
 
 The experiments reported in the paper use up to **500 iterations**.
 
-Users interested in additional experiments may safely adjust the following parameters:
+Users interested in additional experiments may safely adjust the following parameters in `Experiments.py`:
 
 - **`Iterations`**  
   Controls the number of independent network snapshots used in the experiment.
