@@ -35,9 +35,7 @@ The GitHub repository includes the reduced dataset:
 **Size:** approximately 20 MB  
 **Supported network snapshots:** 4 (`It1`--`It4`)
 
-This dataset is sufficient for reproducing the artifact results. With this dataset, the number of iterations can be increased up to **4** by modifying **`self.Iterations`** in:
-
-`Experiments.py`
+This dataset is sufficient for reproducing the artifact results. With this dataset, the number of iterations can be increased up to **4** by modifying **`self.Iterations`** in: `Experiments.py`
 
 For example:
 
