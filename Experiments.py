@@ -812,58 +812,88 @@ class EXP_Mix(object):
 
 
     def print_table(self):
-        print("TABLE II: Performance and anonymity for long sessions.")
+
+        """Print Table III: Comparison against state of the art."""
+    
+        headers = [
+            "Method",
+            "d1 (ms)",
+            "RSD",
+            "1/(d1·RSD)",
+            "M_RL",
+            "SAA",
+            "SRC",
+            "Complexity",
+        ]
+    
+        rows = [
+            ["Baseline [11]",       "122", "0.03", "273",  "2.81", "0.001", "0.01", "O(N)"],
+            ["LARMix [31]",         "49",  "0.15", "136",  "3",    "0.001", "0.02", "O(N^5)"],
+            ["LAMP, SC [32]",       "16",  "0.09", "695",  "5",    "0.006", "0.12", "O(N log N)"],
+            ["LAMP, MC [32]",       "10",  "0.15", "666",  "5.2",  "0.007", "0.12", "O(N log N)"],
+            ["OptiMix, GWR [29]",   "17",  "0.05", "1177", "4.24", "0.001", "0.05", "O(N^2)"],
+            ["OptiMix, GPR [29]",   "26",  "0.05", "769",  "4.1",  "0.002", "0.03", "O(N^2)"],
+            ["AURORA, RLP",         "7",   "0.72", "199",  "0.2",  "0.006", "0.24", "O(N^3)"],
+            ["AURORA, REP",         "16",  "0.05", "1250", "0.01", "0.001", "0.03", "O(N^2)"],
+            ["AURORA, RBR",         "8",   "0.05", "2500", "0.22", "0.004", "0.04", "O(N^2)"],
+        ]
+    
+        # Determine the required width of each column.
+        widths = [
+            max(len(str(headers[i])), max(len(str(row[i])) for row in rows))
+            for i in range(len(headers))
+        ]
+    
+        def separator():
+            return "+" + "+".join("-" * (width + 2) for width in widths) + "+"
+    
+        def format_row(row):
+            cells = []
+            for i, value in enumerate(row):
+                if i == 0:
+                    # Left-align method names.
+                    cells.append(f" {value:<{widths[i]}} ")
+                else:
+                    # Center-align numerical values and complexity.
+                    cells.append(f" {value:^{widths[i]}} ")
+    
+            return "|" + "|".join(cells) + "|"
+    
         print()
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-        print("| Metrics | Methods  |     m_u = 25      |     m_u = 100     |     m_u = 500     |")
-        print("|         |          | RLP   REP   RBR   | RLP   REP   RBR   | RLP   REP   RBR   |")
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-        print("| d1(ms)  | Naive    | 12    36    13   | 17    41    20   | 20    43    23   |")
-        print("|         | K-HF-Opt | 11    29    12   | 13    30    14   | 14    31    15   |")
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-        print("| M_RL    | Naive    | 0.2   0.01  0.22 | 0.2   0.01  0.23 | 0.22  0.01  0.24 |")
-        print("|         | K-HF-Opt | 0.2   0.01  0.23 | 0.21  0.01  0.023| 0.23  0.02  0.25 |")
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-        print("| RSD     | Naive    | 0.98  0.22  0.34 | 0.99  0.64  0.81 | 1     1     1    |")
-        print("|         | K-HF-Opt | 0.71  0.12  0.17 | 0.71  0.13  0.18 | 0.72  0.13  0.19 |")
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-        print("| SAA     | Naive    | 0.11  0.01  0.02 | 0.38  0.06  0.07 | 0.9   0.26  0.3  |")
-        print("|         | K-HF-Opt | 0.06  0.01  0.01 | 0.08  0.02  0.02 | 0.08  0.02  0.02 |")
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-        print("| SRC     | Naive    | 0.03  0.005 0.01 | 0.11  0.02  0.04 | 0.45  0.1   0.18 |")
-        print("|         | K-HF-Opt | 0.02  0.004 0.007| 0.03  0.008 0.015| 0.03  0.01  0.015|")
-
-        print("+---------+----------+-------------------+-------------------+-------------------+")
-
-
-    def table_E2E(self):
-        Class = CirMixNet(self.num_targets,self.Iterations,self.Capacity,self.run,self.delay1,self.delay2,self.W1,self.W2,self.L,self.base)
-
-        data0 = Class.E2E_Analysis(0.08,'REB','NYM',self.Iterations)
-
-        List1 = make_c(data0['Imbalance']['A_L'], data0['Balance']['A_L'])
-
-        L1 = [ int(1000*item) for item in List1]
-
-        L2 = [int((150 - item)/3) for item in L1]
-
-        List3 = make_c(data0['Imbalance']['A_H'], data0['Balance']['A_H'])
-        L3 = [int(1000*(1/(2**item)))/1000 for item in List3]
-
-        List4 = make_c(data0['Imbalance']['S_H'], data0['Balance']['S_H'])
-        L4 = [int(1000*(1/(2**item)))/1000 for item in List4]
-
-        self.print_table_I(L1,L2,L3, L4)
+        print("TABLE III: Comparison against state of the art.")
+        print()
+    
+        print(separator())
+        print(format_row(headers))
+        print(separator())
+    
+        for i, row in enumerate(rows):
+            print(format_row(row))
+    
+            # Separate the method groups as in the paper.
+            if i in [1, 3, 5]:
+                print(separator())
+    
+        print(separator())
+    
+        def table_E2E(self):
+            Class = CirMixNet(self.num_targets,self.Iterations,self.Capacity,self.run,self.delay1,self.delay2,self.W1,self.W2,self.L,self.base)
+    
+            data0 = Class.E2E_Analysis(0.08,'REB','NYM',self.Iterations)
+    
+            List1 = make_c(data0['Imbalance']['A_L'], data0['Balance']['A_L'])
+    
+            L1 = [ int(1000*item) for item in List1]
+    
+            L2 = [int((150 - item)/3) for item in L1]
+    
+            List3 = make_c(data0['Imbalance']['A_H'], data0['Balance']['A_H'])
+            L3 = [int(1000*(1/(2**item)))/1000 for item in List3]
+    
+            List4 = make_c(data0['Imbalance']['S_H'], data0['Balance']['S_H'])
+            L4 = [int(1000*(1/(2**item)))/1000 for item in List4]
+    
+            self.print_table_I(L1,L2,L3, L4)
 
 
     def print_table_I(self,d_l, mu, RSD, SAA):
