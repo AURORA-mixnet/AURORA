@@ -151,17 +151,13 @@ class EXP_Mix(object):
         D = [r'$\theta = 1$',r'$\theta = 1.5$',r'$\theta = 2$',r'$\theta = 3$',r'$\theta = 5$']
         Tau = [i*0.2 for i in range(6)]
 
-        yy1 = [ a['Analytical']['RIPE']['DNA']['RLP']['LB4'][i][0]*(1+0.1*(i+2)) for i in range(6)]
-        yy2 = [ a['Analytical']['RIPE']['DNA']['RLP']['LB3'][i][0]*(1+0.15*(i+2)) for i in range(6)]
-        yy3 = [ a['Analytical']['RIPE']['DNA']['RLP']['LB2'][i][0]*(1+0.2*(i+2)) for i in range(6)]
-        yy4 = [ a['Analytical']['RIPE']['DNA']['RLP']['LB1'][i][0]*(1+0.25*(i+2)) for i in range(6)]
-        yy5 = [ a['Analytical']['RIPE']['DNA']['RLP']['LB0'][i][0]*(1+0.3*(i+2)) for i in range(6)]
+        y1 = [a['Analytical']['RIPE']['DNA']['RLP']['LB4'][i][0] for i in range(6)]
+        y2 = [a['Analytical']['RIPE']['DNA']['RLP']['LB3'][i][0] for i in range(6)]
+        y3 = [a['Analytical']['RIPE']['DNA']['RLP']['LB2'][i][0] for i in range(6)]
+        y4 = [a['Analytical']['RIPE']['DNA']['RLP']['LB1'][i][0] for i in range(6)]
+        y5 = [a['Analytical']['RIPE']['DNA']['RLP']['LB0'][i][0] for i in range(6)]
 
-        y1 = yy1[:-1]+a['Analytical']['RIPE']['DNA']['REB']['LB4'][-1]
-        y2 = yy2[:-1]+a['Analytical']['RIPE']['DNA']['REB']['LB3'][-1]
-        y3 = yy3[:-1]+a['Analytical']['RIPE']['DNA']['REB']['LB2'][-1]
-        y4 = yy4[:-1]+a['Analytical']['RIPE']['DNA']['REB']['LB1'][-1]
-        y5 = yy5[:-1]+a['Analytical']['RIPE']['DNA']['REB']['LB0'][-1]
+
 
         Y = [y5,y4,y3,y2,y1]
 
@@ -172,20 +168,15 @@ class EXP_Mix(object):
         D = [r'$\theta = 1$',r'$\theta = 1.5$',r'$\theta = 2$',r'$\theta = 3$',r'$\theta = 5$']
         Tau = [i*0.2 for i in range(6)]
 
-        yy1 = [ a['Analytical']['RIPE']['DNA']['RLP']['HB4'][i][0]*(1+0.08*(i+2)) for i in range(6)]
-        yy2 = [ a['Analytical']['RIPE']['DNA']['RLP']['HB3'][i][0]*(1+0.15*(i+2)) for i in range(6)]
-        yy3 = [ a['Analytical']['RIPE']['DNA']['RLP']['HB2'][i][0]*(1+0.3*(i+2)) for i in range(6)]
-        yy4 = [ a['Analytical']['RIPE']['DNA']['RLP']['HB1'][i][0]*(1+0.28*(i+2)) for i in range(6)]
-        yy5 = [ a['Analytical']['RIPE']['DNA']['RLP']['HB0'][i][0]*(1+0.4*(i+2)) for i in range(6)]
+        y1 = a['Analytical']['RIPE']['DNA']['RLP']['HB4']
+        y2 =  a['Analytical']['RIPE']['DNA']['RLP']['HB3']
+        y3 = a['Analytical']['RIPE']['DNA']['RLP']['HB2']
+        y4 = a['Analytical']['RIPE']['DNA']['RLP']['HB1']
+        y5 = a['Analytical']['RIPE']['DNA']['RLP']['HB0']
 
-        y1 = yy1[:-1]+a['Analytical']['RIPE']['DNA']['REB']['HB4'][-1]
-        y2 = yy2[:-1]+a['Analytical']['RIPE']['DNA']['REB']['HB3'][-1]
-        y3 = yy3[:-1]+a['Analytical']['RIPE']['DNA']['REB']['HB2'][-1]
-        y4 = yy4[:-1]+a['Analytical']['RIPE']['DNA']['REB']['HB1'][-1]
-        y5 = yy5[:-1]+a['Analytical']['RIPE']['DNA']['REB']['HB0'][-1]
 
         Y = [y5,y4,y3,y2,y1]
-        Y_ = [[1/(2**term) for term in item] for item in Y][::-1]
+        Y_ = [[1/(2**term[0]) for term in item] for item in Y][::-1]
 
         PLT_E = Plotter(Tau,Y_,D[::-1],X_L,r'$\mathsf{RSD}$','Figures/'+'Fig_5a.png')
         PLT_E.colors = ['red','purple','darkgreen','black','blue']
@@ -226,14 +217,6 @@ class EXP_Mix(object):
         y4 = [a['Analytical']['RIPE']['DNA']['REB']['LB1'][i][0] for i in range(6)]
         y5 = [a['Analytical']['RIPE']['DNA']['REB']['LB0'][i][0] for i in range(6)]
 
-        x11 = y5[2]
-        x22 = y5[3]
-
-        y5[2]  = y4[2]
-        y5[3]  = y4[3]
-        y4[2]  = x11
-        y4[3]  = x22
-
         Y = [y5,y4,y3,y2,y1]
 
         PLT_E = Plotter(Tau,Y,D,X_L,'Latency (sec)','Figures/'+Name_L_LPR)
@@ -270,12 +253,8 @@ class EXP_Mix(object):
         y4 = [get_median(a['Analytical']['RIPE']['DNA']['REB']['Band_B3'][i]) for i in range(6)]
         y5 = [get_median(a['Analytical']['RIPE']['DNA']['REB']['Band_B4'][i]) for i in range(6)]
 
-        y5[0] = y1[0]
-        y4[0] = y1[0]
-        y3[0] = y1[0]
-        y2[0] = y1[0]
-        yy1 = [y1[0]]+[0.65*y1[i+1] for i in range(5)]
-        Y = [y5,y4,y3,y2,yy1][::-1]
+
+        Y = [y5,y4,y3,y2,y1][::-1]
 
         PLT_E = Plotter(Tau,Y,D[::-1],X_L,r'$\mathsf{M}_{RL}$','Figures/'+Name_W_LPR)
 
@@ -329,8 +308,6 @@ class EXP_Mix(object):
         y4 = [get_median(a['Analytical']['RIPE']['DNA']['RST']['tau']['Band_B3'][i]) for i in range(6)]
         y5 = [get_median(a['Analytical']['RIPE']['DNA']['RST']['tau']['Band_B4'][i]) for i in range(6)]
 
-        y1[0] = 1.03*y2[0]
-
 
         Y = [y5,y4,y3,y2,y1][::-1]
 
@@ -354,11 +331,7 @@ class EXP_Mix(object):
         y4 = [a['Analytical']['RIPE']['DNA']['RST']['T']['LB1'][i][0] for i in range(6)]
         y5 = [a['Analytical']['RIPE']['DNA']['RST']['T']['LB0'][i][0] for i in range(6)]
 
-        y1[0] = y1[1]/5
-        y2[0] = y2[1]/5
-        y3[0] = y3[1]/5
-        y4[0] = y4[1]/5
-        y5[0] = y5[1]/5
+
         Y = [y5,y4,y3,y2,y1]
 
         PLT_E = Plotter(T,Y,D,r'Threshold ($\mathsf{T}$)','Latency (sec)','Figures/'+Name_L_LPR)
@@ -375,9 +348,7 @@ class EXP_Mix(object):
 
         Y = [y5,y4,y3,y2,y1]
         Y_ = [[1/(2**term[0]) for term in item] for item in Y][::-1]
-        Y_[2][0] = 1.3*Y_[2][1]
-        Y_[3][0] = 1.3*Y_[3][1]
-        Y_[4][0] = 1.3*Y_[4][1]
+
         PLT_E = Plotter(T,Y_,D[::-1],r'Threshold ($\mathsf{T}$)',r'$\mathsf{RSD}$','Figures/'+Name_E_LPR)
         PLT_E.colors = ['red','purple','darkgreen','black','blue']
         PLT_E.markers = ['o', 's', 'D', 'v', '^'][::-1]
@@ -396,15 +367,7 @@ class EXP_Mix(object):
         y4 = [get_median(a['Analytical']['RIPE']['DNA']['RST']['T']['Band_B3'][i]) for i in range(6)]
         y5 = [get_median(a['Analytical']['RIPE']['DNA']['RST']['T']['Band_B4'][i]) for i in range(6)]
 
-        y1[0] = 1.03*y2[0]
 
-        y1[3] = 0.92*y1[3]
-
-        y1[4] = 0.9*y1[4]
-
-        y1[5] = 0.9*y1[5]
-
-        y3[0] = y4[0]
 
         Y = [y5,y4,y3,y2,y1][::-1]
 
