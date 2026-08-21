@@ -312,7 +312,7 @@ AURORA/
 
 - **Configuration Parameters:** The configuration parameters match those used for Figure 11. Specifically:
   - `L = 3`
-  - `W = 300`
+  - `W = 80`
   - Routing strategy: `REP`
   - Average mixing delay: `μ = 50 ms`
   - `self.Iterations = 1` in `Experiments.py` by default for artifact evaluation
