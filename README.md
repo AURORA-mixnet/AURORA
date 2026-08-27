@@ -306,7 +306,9 @@ AURORA/
 
 <img width="1541" height="347" alt="image" src="https://github.com/user-attachments/assets/2ffe7a68-91b1-4aca-92ea-e51ab9d0d512" />
 
+- **Note:** In particular, for (T=2), the threshold is very small, so only a small number of nodes are selected under the given parameters. As a result, the RBR measurements in a single iteration can be strongly influenced by the particular characteristics of those nodes. This effect is averaged out over many iterations.
 
+- For (T=12), more preferred nodes fall within the threshold, making the results less sensitive to the particular nodes selected in one iteration. The results are therefore more stable even in the reduced experiment.
 
 ### E2: Reproducing Figures 11(a) and 11(b); Verifying Claims C4 and C5 [< 20 min]
 
@@ -420,6 +422,7 @@ Users interested in additional experiments may safely adjust the following param
 > The reduced artifact configuration is therefore intended to verify the implementation and reproduce the trends underlying the paper's main claims within a practical artifact-evaluation time.
 >
 > Close numerical agreement with the results reported in the paper requires using the same number of iterations as in the paper.
+> 
 > Note that the execution times reported here are based on tests conducted in the specified workstation environment. The actual execution time may be shorter or longer depending on the hardware and system environment.
 
 > [!WARNING]
