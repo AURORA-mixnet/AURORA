@@ -414,7 +414,9 @@ Users interested in additional experiments may safely adjust the following param
 > **Execution Time and Configuration**
 >
 > The computational cost grows approximately linearly with the number of iterations because each iteration evaluates an additional network snapshot.
->
+
+The execution times reported here are based on tests conducted in the specified workstation environment. The actual execution time may be shorter or longer depending on the hardware and system environment.
+
 > Consequently, an experiment requiring approximately **one hour for one iteration** may require approximately **three weeks when repeated 500 times**.
 >
 > The reduced artifact configuration is therefore intended to verify the implementation and reproduce the trends underlying the paper's main claims within a practical artifact-evaluation time.
