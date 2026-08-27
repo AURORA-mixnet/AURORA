@@ -1,3 +1,4 @@
+# AURORA routing revision: camera-ready equations + E1 m_u=5 support (final)
 """
 Routing-distribution construction and analysis utilities.
 
@@ -5,8 +6,9 @@ This module implements routing policies, latency processing, and supporting
 matrix operations used by the experiments.
 """
 
-import math
+import os
 import statistics
+import warnings
 
 import numpy as np
 
@@ -151,53 +153,84 @@ class Routing(object):
         self.W = int(self.N/self.L)
 
 
-    def alpha_closest(self,List,Omega,Top):
-        alpha,K = Top
-        x = math.pi/4
-        List_ = List.copy()
-        dis = [((Omega[j])**alpha)/(self.W**((1-alpha)*math.pi)) for j in range(len(Omega))]
-        Min = 10000000
-        Index = []
-        for i in range(K):
-            index = List_.index(min(List_))
-            Index.append(index)
-            List_[index] = Min
-        for item in Index:
-            dis[item] = (((Omega[item])**alpha))/((List[item])**((1-alpha)*math.pi))
-        Sum = np.sum(dis)
-        Dis = [dis[i]/Sum for i in range(len(Omega))]
-        return Dis
-    def EXP_New(self,List,Omega_List,Tau):
-        hyperrr = 5
-        if Tau == 0:
-            Tau = 0.01
-        Tau = math.sqrt(Tau)
+    def alpha_closest(self, List, Omega, Top):
+        """Rank-Based Routing (RBR), matching paper Eq. (7)."""
+        alpha, K = Top
+        alpha = float(alpha)
+        K = int(K)
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("alpha must lie in [0, 1].")
 
-        Lambda = (1-Tau)/Tau
-        List_1 = np.copy(List)
+        latencies = np.asarray(List, dtype=float)
+        capacities = np.asarray(Omega, dtype=float)
+        W = len(capacities)
+        if latencies.shape != capacities.shape or W == 0:
+            raise ValueError("latency and capacity vectors must have equal non-zero length.")
+        if not 1 <= K <= W:
+            raise ValueError("RBR threshold T must satisfy 1 <= T <= W.")
+        if np.any(latencies <= 0):
+            raise ValueError("RBR requires strictly positive link latencies.")
+        if np.any(capacities < 0) or capacities.sum() <= 0:
+            raise ValueError("capacities must be non-negative with positive sum.")
 
-        List_0 = [(Omega_List[i])**(Tau*hyperrr) for i in range(len(Omega_List))]
-        sorted_list, recovery_list = sort_and_recover(List_1)
+        order = np.argsort(latencies, kind="mergesort")
+        top = order[:K]
+        weights = np.power(capacities, alpha) / (float(W) ** (1.0 - alpha))
+        weights[top] = np.power(capacities[top], alpha) / np.power(
+            latencies[top], 1.0 - alpha
+        )
+        total = float(weights.sum())
+        if not np.isfinite(total) or total <= 0:
+            raise ValueError("RBR produced an invalid normalization constant.")
+        return (weights / total).tolist()
 
-        List_A = [(math.exp(-Lambda*i)) for i in range(len(sorted_list))]
+    def EXP_New(self, List, Omega_List, Tau):
+        """Routing with Exponential Preference (REP), matching paper Eq. (6)."""
+        alpha = float(Tau)
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("alpha must lie in [0, 1].")
 
-        # Recover the original list
-        reconstructed_list = recover_original(List_A, recovery_list)
+        latencies = np.asarray(List, dtype=float)
+        capacities = np.asarray(Omega_List, dtype=float)
+        W = len(capacities)
+        if latencies.shape != capacities.shape or W == 0:
+            raise ValueError("latency and capacity vectors must have equal non-zero length.")
+        if np.any(capacities < 0) or capacities.sum() <= 0:
+            raise ValueError("capacities must be non-negative with positive sum.")
 
+        order = np.argsort(latencies, kind="mergesort")
+        ranks = np.empty(W, dtype=int)
+        ranks[order] = np.arange(W)
+        scores = -ranks.astype(float)
 
-        dis_ = [reconstructed_list[i]*List_0[i] for i in range(len(Omega_List))]
+        # Eq. (6) is singular at alpha=0.  Use its alpha -> 0+ limit.
+        if alpha == 0.0:
+            out = np.zeros(W, dtype=float)
+            out[order[0]] = 1.0
+            return out.tolist()
 
-        Sum = np.sum(dis_)
-        dis = [dis_[i]/Sum for i in range(len(Omega_List))]
+        # Evaluate exp(score*(1-alpha)/alpha) * omega**alpha in log space.
+        positive = capacities > 0
+        log_weights = scores * ((1.0 - alpha) / alpha)
+        log_weights = np.where(
+            positive,
+            log_weights + alpha * np.log(np.where(positive, capacities, 1.0)),
+            -np.inf,
+        )
+        log_weights -= np.max(log_weights)
+        weights = np.exp(log_weights)
+        total = float(weights.sum())
+        if not np.isfinite(total) or total <= 0:
+            raise ValueError("REP produced an invalid normalization constant.")
+        return (weights / total).tolist()
 
-        return dis
-
-    def Linear(self,L_Matrix_,Omega,alpha):
-        L_Matrix = np.array(L_Matrix_)
-
-        R = optimize_pulp(L_Matrix,Omega,alpha)
-
-        return R
+    def Linear(self, L_Matrix_, Omega, alpha):
+        """Routing with Linear Programming (RLP), using Eqs. (3)-(5)."""
+        L_Matrix = np.asarray(L_Matrix_, dtype=float)
+        R = optimize_pulp(L_Matrix, Omega, alpha)
+        if R is None:
+            raise RuntimeError("RLP optimization did not return a routing matrix.")
+        return np.asarray(R, dtype=float)
 
 
     def Entropy_Transformation(self,List_R):
@@ -235,38 +268,184 @@ class Routing(object):
 
         return normalize_stochastic(Matrix, theta)
 
-    def Matrix_routing(self,fun,Matrix,Omega,Param):
-        #fun: 'RST', 'REB', 'RLP'
-        if fun == 'RLP':
-            return self.Linear(Matrix,Omega,Param)
+    def Matrix_routing(self, fun, Matrix, Omega, Param):
+        """Build a routing matrix for RLP, REP, or RBR.
 
+        The legacy artifact names ``REB`` and ``RST`` are accepted as aliases
+        for REP and RBR, respectively, so existing experiment code continues
+        to work unchanged.
+        """
+        fun = str(fun).upper()
+        if fun == "RLP":
+            return self.Linear(Matrix, Omega, Param)
+
+        if fun in {"REP", "REB"}:
+            builder = self.EXP_New
+        elif fun in {"RBR", "RST"}:
+            builder = self.alpha_closest
         else:
-            Dis_Matrix = np.zeros((self.W,self.W))
-            if fun == 'REB':
-                for i in range(self.W):
-                    List = To_list(Matrix[i,:])
-                    dis = self.EXP_New(List,Omega,Param)
-                    Dis_Matrix[i,:] = dis
-            elif fun == 'RST':
-                for i in range(self.W):
-                    List = To_list(Matrix[i,:])
-                    dis = self.alpha_closest(List,Omega,Param)
-                    Dis_Matrix[i,:] = dis
-        return Dis_Matrix
+            raise ValueError(f"unknown routing method: {fun}")
+
+        matrix = np.asarray(Matrix, dtype=float)
+        if matrix.ndim != 2 or matrix.shape != (self.W, self.W):
+            raise ValueError(
+                f"routing latency matrix must have shape {(self.W, self.W)}, "
+                f"got {matrix.shape}"
+            )
+
+        out = np.zeros((self.W, self.W), dtype=float)
+        for i in range(self.W):
+            row = To_list(matrix[i, :])
+            out[i, :] = builder(row, Omega, Param)
+        return out
 
 ###########################Latency measurements###############################
-    def Latency_Measure(self,Latency_List,Routing_List,Path):
-        L = 3
-        n1,n2 = np.shape(Latency_List[0])
+    @staticmethod
+    def _probability_vector(values, label="probabilities"):
+        """Return a finite, non-negative, normalized probability vector.
 
-        x = 0
-        for i in range(n1):
-            for j in range(n1):
-                for k in range(n2):
-                    p = Path[i]*Routing_List[0][i,j]*Routing_List[1][j,k]
-                    l = Latency_List[0][i,j]+Latency_List[1][j,k]
-                    x+=p*l
-        return x
+        Numerical solvers can return tiny negative values for variables that
+        are theoretically constrained to be non-negative.  Sampling routines
+        reject such values.  We therefore clip negative round-off to zero and
+        renormalize.  If a noticeably negative value is encountered we emit a
+        warning instead of crashing the experiment, while still making the
+        correction explicit.
+        """
+        probs = np.asarray(values, dtype=float).reshape(-1)
+        if probs.size == 0:
+            raise ValueError(f"{label} is empty")
+        if not np.all(np.isfinite(probs)):
+            raise ValueError(f"{label} contains NaN or infinite values")
+
+        min_prob = float(np.min(probs))
+        if min_prob < -1e-6:
+            warnings.warn(
+                f"{label} contained a negative value ({min_prob:.3e}); "
+                "clipping negative entries to zero before normalization.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        probs = np.clip(probs, 0.0, None)
+        total = float(probs.sum())
+        if not np.isfinite(total) or total <= 0.0:
+            raise ValueError(f"{label} has zero or invalid probability mass")
+        return probs / total
+
+    def Latency_Measure(
+        self,
+        Latency_List,
+        Routing_List,
+        Path,
+        m_u=1,
+        n_sessions=None,
+        seed=None,
+    ):
+        """Measure link delay under the supplied routing matrices.
+
+        ``m_u == 1`` preserves the artifact's original exact expected-delay
+        calculation.  For ``m_u > 1``, the function samples explicit sessions
+        of ``m_u`` independently routed packets, takes the slowest packet in
+        each session, and returns the mean of those session maxima.  E1 passes
+        ``m_u=5`` to match the paper's session-level definition of ``d_l``.
+
+        The Monte Carlo calculation is reproducible.  The number of sessions
+        defaults to ``AURORA_LATENCY_SESSIONS`` (5000) and the RNG seed to
+        ``AURORA_SEED`` (42).
+        """
+        m_u = int(m_u)
+        if m_u < 1:
+            raise ValueError("m_u must be at least 1")
+        if len(Latency_List) != len(Routing_List):
+            raise ValueError("Latency_List and Routing_List must have equal length")
+
+        # Preserve the exact one-packet calculation for existing callers.
+        if m_u == 1:
+            if len(Latency_List) != 2 or len(Routing_List) != 2:
+                # Generic exact expectation for an arbitrary number of hops.
+                entry = self._probability_vector(Path, "entry distribution")
+                state = entry.copy()
+                expected = 0.0
+                for hop, (latency, routing) in enumerate(zip(Latency_List, Routing_List)):
+                    latency = np.asarray(latency, dtype=float)
+                    routing = np.asarray(routing, dtype=float)
+                    if latency.shape != routing.shape:
+                        raise ValueError(
+                            f"hop {hop}: latency and routing matrices must have equal shape"
+                        )
+                    clean = np.vstack(
+                        [self._probability_vector(row, f"hop {hop} routing row {i}")
+                         for i, row in enumerate(routing)]
+                    )
+                    expected += float(np.sum(state[:, None] * clean * latency))
+                    state = state @ clean
+                return expected
+
+            # Original L=3 expression, but normalize rows defensively so solver
+            # round-off cannot create invalid probability mass.
+            p0 = self._probability_vector(Path, "entry distribution")
+            r0 = np.vstack([
+                self._probability_vector(row, f"routing row 0:{i}")
+                for i, row in enumerate(np.asarray(Routing_List[0], dtype=float))
+            ])
+            r1 = np.vstack([
+                self._probability_vector(row, f"routing row 1:{i}")
+                for i, row in enumerate(np.asarray(Routing_List[1], dtype=float))
+            ])
+            l0 = np.asarray(Latency_List[0], dtype=float)
+            l1 = np.asarray(Latency_List[1], dtype=float)
+            if l0.shape != r0.shape or l1.shape != r1.shape:
+                raise ValueError("latency and routing matrix shapes do not match")
+
+            x = 0.0
+            for i in range(r0.shape[0]):
+                for j in range(r0.shape[1]):
+                    for k in range(r1.shape[1]):
+                        p = p0[i] * r0[i, j] * r1[j, k]
+                        x += p * (l0[i, j] + l1[j, k])
+            return float(x)
+
+        if n_sessions is None:
+            n_sessions = int(os.environ.get("AURORA_LATENCY_SESSIONS", "5000"))
+        if seed is None:
+            seed = int(os.environ.get("AURORA_SEED", "42"))
+        n_sessions = int(n_sessions)
+        if n_sessions < 1:
+            raise ValueError("n_sessions must be positive")
+
+        entry_p = self._probability_vector(Path, "entry distribution")
+        rng = np.random.default_rng(int(seed))
+        total_packets = n_sessions * m_u
+        current = rng.choice(entry_p.size, size=total_packets, p=entry_p)
+        packet_delay = np.zeros(total_packets, dtype=float)
+
+        for hop, (latency, routing) in enumerate(zip(Latency_List, Routing_List)):
+            latency = np.asarray(latency, dtype=float)
+            routing = np.asarray(routing, dtype=float)
+            if latency.ndim != 2 or routing.ndim != 2:
+                raise ValueError(f"hop {hop}: latency and routing must be 2-D matrices")
+            if latency.shape != routing.shape:
+                raise ValueError(
+                    f"hop {hop}: latency shape {latency.shape} does not match "
+                    f"routing shape {routing.shape}"
+                )
+            if routing.shape[0] <= int(np.max(current)):
+                raise ValueError(f"hop {hop}: current-node index exceeds routing rows")
+
+            nxt = np.empty(total_packets, dtype=np.int64)
+            for row in np.unique(current):
+                mask = current == row
+                probs = self._probability_vector(
+                    routing[int(row)], f"hop {hop} routing row {int(row)}"
+                )
+                nxt[mask] = rng.choice(
+                    routing.shape[1], size=int(mask.sum()), p=probs
+                )
+
+            packet_delay += latency[current, nxt]
+            current = nxt
+
+        session_delay = packet_delay.reshape(n_sessions, m_u).max(axis=1)
+        return float(np.mean(session_delay))
 
 
     def Bandwidth(self,List_R,Omega,P):

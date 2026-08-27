@@ -1,154 +1,118 @@
 """
 Linear-programming routines for routing optimization.
 
-This module builds and solves the constrained optimization problems used to
-derive routing matrices.
+This module implements Routing with Linear Programming (RLP) exactly as
+specified by AURORA Eqs. (3)-(5).
 """
 
 import numpy as np
 from pulp import LpMinimize, LpProblem, LpStatus, lpSum, LpVariable, PULP_CBC_CMD
 
 
+def _validate_inputs(L_111, Omega, alpha):
+    """Validate and normalize the inputs used by the RLP formulation."""
+    L = np.asarray(L_111, dtype=float)
+    omega = np.asarray(Omega, dtype=float)
+    alpha = float(alpha)
 
-def optimize_pulp0(L_111, Omega, alpha):
-    L = np.array(L_111)
-    W, _ = L.shape
+    if L.ndim != 2 or L.shape[0] != L.shape[1]:
+        raise ValueError("L_111 must be a square W x W latency matrix.")
 
-    # Define problem
-    prob = LpProblem("MatrixOptimization", LpMinimize)
+    W = L.shape[0]
+    if omega.ndim != 1 or len(omega) != W:
+        raise ValueError("Omega must be a one-dimensional vector of length W.")
+    if W == 0:
+        raise ValueError("The routing problem must contain at least one node.")
+    if not np.all(np.isfinite(L)) or not np.all(np.isfinite(omega)):
+        raise ValueError("Latency and capacity inputs must be finite.")
+    if np.any(omega < 0):
+        raise ValueError("Processing capacities must be non-negative.")
+    if float(np.sum(omega)) <= 0:
+        raise ValueError("At least one processing capacity must be positive.")
+    if not 0.0 <= alpha <= 1.0:
+        raise ValueError("alpha must lie in [0, 1].")
 
-    # Decision variables: R[i][j] in [0,1]
-    R_vars = LpVariable.dicts("R", (range(W), range(W)), lowBound=0, upBound=1)
+    return L, omega, alpha, W
 
-    # Objective function
-    prob += lpSum(L[i][j] * R_vars[i][j] for i in range(W) for j in range(W))
 
-    # Row constraints: sum_j R[i][j] = 1
+def optimize_pulp(L_111, Omega, alpha):
+    """Solve the camera-ready RLP formulation from Eqs. (3)-(5).
+
+    Let gamma_ij be the probability of forwarding from node i in the current
+    layer to node j in the next layer, and let
+
+        fraction_j = omega_j / sum_m omega_m.
+
+    The implemented LP is exactly:
+
+        min  (1/W) * sum_i sum_j gamma_ij * L_ij                  (Eq. 3)
+
+        s.t. 0 <= gamma_ij <= 1,
+             sum_j gamma_ij = 1                                  (Eq. 4)
+
+             alpha * fraction_j
+                 <= (1/W) * sum_i gamma_ij
+                 <= (1-alpha) + alpha * fraction_j               (Eq. 5)
+
+    Eq. (5) is entered into PuLP after multiplying all three terms by W.
+    No powered capacity fractions and no slack variables are used.
+    """
+    L, omega, alpha, W = _validate_inputs(L_111, Omega, alpha)
+
+    prob = LpProblem("RLP_CameraReady", LpMinimize)
+
+    # gamma_ij in [0, 1], Eq. (4).
+    gamma = LpVariable.dicts(
+        "gamma", (range(W), range(W)), lowBound=0.0, upBound=1.0
+    )
+
+    # Eq. (3). The factor 1/W does not change the minimizer, but is retained
+    # so the executable formulation literally matches the paper.
+    prob += (1.0 / W) * lpSum(
+        L[i, j] * gamma[i][j]
+        for i in range(W)
+        for j in range(W)
+    )
+
+    # Eq. (4): each row is a probability distribution.
     for i in range(W):
-        prob += lpSum(R_vars[i][j] for j in range(W)) == 1
+        prob += lpSum(gamma[i][j] for j in range(W)) == 1.0
 
-    # Normalization constant: Omega_{k+1}
-    Omega_total = sum((Omega[j] ** alpha) for j in range(W))
-
-    # Column constraints
+    # Eq. (5): use the unmodified capacity fraction omega_j / sum(omega).
+    omega_total = float(np.sum(omega))
     for j in range(W):
-        frac = (Omega[j] ** alpha) / Omega_total
+        fraction = float(omega[j] / omega_total)
+        column_sum = lpSum(gamma[i][j] for i in range(W))
 
-        lower = W * alpha * frac
-        upper = W * ((1 - alpha) + alpha * frac)  # your chosen version
+        # Eq. (5), multiplied by W:
+        # W*alpha*fraction <= sum_i gamma_ij
+        #                      <= W*((1-alpha) + alpha*fraction).
+        lower = W * alpha * fraction
+        upper = W * ((1.0 - alpha) + alpha * fraction)
 
-        prob += lpSum(R_vars[i][j] for i in range(W)) >= lower
-        prob += lpSum(R_vars[i][j] for i in range(W)) <= upper
+        prob += column_sum >= lower
+        prob += column_sum <= upper
 
-    # Solve
     prob.solve(PULP_CBC_CMD(msg=False))
 
-    # Check status
-    if LpStatus[prob.status] == 'Optimal':
-        R = np.array([[R_vars[i][j].varValue for j in range(W)] for i in range(W)])
-        return R
+    status = LpStatus[prob.status]
+    if status != "Optimal":
+        raise RuntimeError(f"RLP optimization failed: {status}")
 
-    elif LpStatus[prob.status] == 'Infeasible':
-        None
-        prob.writeLP("MatrixOptimization_Infeasible.lp")
-        return None
+    result = np.array(
+        [[gamma[i][j].varValue for j in range(W)] for i in range(W)],
+        dtype=float,
+    )
+    result[np.abs(result) < 1e-12] = 0.0
+    return result
 
-    else:
-        raise ValueError("Optimization failed: " + LpStatus[prob.status])
+
+# Backward-compatible names retained because older experiment scripts may call
+# them.  They intentionally delegate to the same camera-ready formulation so
+# that no stale alternative RLP equations remain in the repository.
+def optimize_pulp0(L_111, Omega, alpha):
+    return optimize_pulp(L_111, Omega, alpha)
 
 
 def optimize_pulp1(L_111, Omega, alpha):
-    L = np.array(L_111)
-    W, _ = L.shape
-
-    # Define problem
-    prob = LpProblem("MatrixOptimization", LpMinimize)
-
-    # Decision variables: gamma_{ij} in [0,1]
-    R_vars = LpVariable.dicts("R", (range(W), range(W)), lowBound=0, upBound=1)
-
-    # Objective function
-    prob += lpSum(L[i][j] * R_vars[i][j] for i in range(W) for j in range(W))
-
-    # Row constraints: sum_j gamma_{ij} = 1
-    for i in range(W):
-        prob += lpSum(R_vars[i][j] for j in range(W)) == 1
-
-    # Normalization constant Omega_{k+1}
-    Omega_total = sum(Omega[j] for j in range(W))
-
-    # Column constraints (MATCHING YOUR IMAGE)
-    for j in range(W):
-        frac = (Omega[j])**alpha / Omega_total
-
-        lower = W*alpha * frac
-        upper = W*frac
-
-        prob += lpSum(R_vars[i][j] for i in range(W)) >= lower
-        prob += lpSum(R_vars[i][j] for i in range(W)) <= upper
-
-    # Solve
-    prob.solve(PULP_CBC_CMD(msg=False))
-
-    # Check status
-    if LpStatus[prob.status] == 'Optimal':
-        R = np.array([[R_vars[i][j].varValue for j in range(W)] for i in range(W)])
-        return R
-
-    elif LpStatus[prob.status] == 'Infeasible':
-        None
-        prob.writeLP("MatrixOptimization_Infeasible.lp")
-        return None
-
-    else:
-        raise ValueError("Optimization failed: " + LpStatus[prob.status])
-
-
-def optimize_pulp(L_111, Omega, alpha, lambda_penalty=1000):
-    L = np.array(L_111)
-    W, _ = L.shape
-
-    prob = LpProblem("MatrixOptimization", LpMinimize)
-
-    # Decision variables
-    R = LpVariable.dicts("R", (range(W), range(W)), lowBound=0, upBound=1)
-
-    # Slack variables
-    s_low = LpVariable.dicts("s_low", range(W), lowBound=0)
-    s_up = LpVariable.dicts("s_up", range(W), lowBound=0)
-
-    # Objective: original + penalty
-    prob += (
-        lpSum(L[i][j] * R[i][j] for i in range(W) for j in range(W))
-        + lambda_penalty * lpSum(s_low[j] + s_up[j] for j in range(W))
-    )
-
-    # Row constraints
-    for i in range(W):
-        prob += lpSum(R[i][j] for j in range(W)) == 1
-
-    # Normalize Omega
-    Omega_total = sum(Omega)
-
-    for j in range(W):
-        frac = (Omega[j] / Omega_total) ** alpha if Omega[j] > 0 else 0
-
-        lower = W * alpha * frac
-        upper = W * frac
-
-        col_sum = lpSum(R[i][j] for i in range(W))
-
-        # Relaxed constraints
-        prob += col_sum >= lower - s_low[j]
-        prob += col_sum <= upper + s_up[j]
-
-    prob.solve(PULP_CBC_CMD(msg=False))
-
-
-    if LpStatus[prob.status] == 'Optimal':
-        R_sol = np.array([[R[i][j].varValue for j in range(W)] for i in range(W)])
-        return R_sol
-    else:
-        return None
-
-
+    return optimize_pulp(L_111, Omega, alpha)
