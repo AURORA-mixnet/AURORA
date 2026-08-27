@@ -421,7 +421,7 @@ Users interested in additional experiments may safely adjust the following param
 >
 > Close numerical agreement with the results reported in the paper requires using the same number of iterations as in the paper.
 > Note that the execution times reported here are based on tests conducted in the specified workstation environment. The actual execution time may be shorter or longer depending on the hardware and system environment.
-> 
+
 > [!WARNING]
 > Other parameters in `Experiments.py` should not be modified unless the evaluator is familiar with the dependencies among mixnet topology, routing algorithms, and simulation parameters.
 >
